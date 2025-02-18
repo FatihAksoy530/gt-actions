@@ -1,0 +1,28 @@
+name: QA Check Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      jira-status:
+        description: 'Jira Status'
+        required: true
+        default: 'qa-ready'
+
+jobs:
+  qa-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Run QA check (Custom script or tool)
+        run: |
+          echo "Running QA Check"
+          if [ "${{ github.event.inputs.jira-status }}" == "qa-ready" ]; then
+            # Execute your QA scripts, tests, or tools
+            echo "QA check passed!"
+          else
+            echo "QA check failed!"
+            exit 1
+          fi
