@@ -1,8 +1,8 @@
-name: QA Check Workflow
+name: QA Check Workflow and Label Approval
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   qa-check:
@@ -11,7 +11,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set QA check to pending
+      - name: Set initial QA status to pending
+        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
         run: |
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -22,3 +23,31 @@ jobs:
                   "context": "QA Check"
                 }' \
             https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}
+
+      - name: Check label and update QA status
+        run: |
+          if [[ "${{ github.event.label.name }}" == "qa-passed" ]]; then
+            if [[ "${{ github.event.action }}" == "labeled" ]]; then
+              # If the 'qa-passed' label is added
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d '{
+                      "state": "success",
+                      "description": "QA check passed",
+                      "context": "QA Check"
+                    }' \
+              https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}
+            elif [[ "${{ github.event.action }}" == "unlabeled" ]]; then
+              # If the 'qa-passed' label is removed
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d '{
+                      "state": "pending",
+                      "description": "Waiting for QA review",
+                      "context": "QA Check"
+                    }' \
+              https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}
+            fi
+          fi
