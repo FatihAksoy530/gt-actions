@@ -1,28 +1,24 @@
 name: QA Check Workflow
 
 on:
-  workflow_dispatch:
-    inputs:
-      jira-status:
-        description: 'Jira Status'
-        required: true
-        default: 'qa-ready'
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   qa-check:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Run QA check (Custom script or tool)
+      - name: Set QA check to pending
         run: |
-          echo "Running QA Check"
-          if [ "${{ github.event.inputs.jira-status }}" == "qa-ready" ]; then
-            # Execute your QA scripts, tests, or tools
-            echo "QA check passed!"
-          else
-            echo "QA check failed!"
-            exit 1
-          fi
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "state": "pending",
+                  "description": "Waiting for QA review",
+                  "context": "QA Check"
+                }' \
+            https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}
