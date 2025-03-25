@@ -2,7 +2,7 @@ name: QA Check Workflow and Label Approval
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [labeled, unlabeled]
 
 jobs:
   qa-check:
@@ -10,20 +10,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
-      - name: Set initial QA status to pending
-        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
-        run: |
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-                  "state": "pending",
-                  "description": "Waiting for QA review",
-                  "context": "QA Check"
-                }' \
-            https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}
-
       - name: Check label and update QA status
         run: |
           if [[ "${{ github.event.label.name }}" == "qa-passed" ]]; then
